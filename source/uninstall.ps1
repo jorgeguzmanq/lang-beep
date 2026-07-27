@@ -1,9 +1,11 @@
 # uninstall.ps1 - Desinstala lang-beep para el usuario actual.
-# Quita la Tarea Programada (y el acceso directo heredado si existe) y detiene
-# el proceso en ejecucion.
+# Quita la Tarea Programada (y el acceso directo heredado si existe), detiene
+# el proceso en ejecucion y borra la copia instalada en %LocalAppData%\lang-beep
+# (install.ps1 copia ahi los archivos; no es una carpeta que el usuario gestione).
 
 $ErrorActionPreference = 'Stop'
-$TaskName = 'lang-beep'
+$TaskName   = 'lang-beep'
+$InstallDir = Join-Path $env:LOCALAPPDATA 'lang-beep'
 
 # 1) Quitar la Tarea Programada
 $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
@@ -28,4 +30,10 @@ Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" |
     ForEach-Object { Stop-Process -Id $_.ProcessId -Force; $script:found = $true; Write-Host "[OK] Detenido PID $($_.ProcessId)" }
 if (-not $found) { Write-Host "[i] No habia proceso en ejecucion." }
 
-Write-Host "[OK] lang-beep desinstalado. Los archivos de la carpeta NO se borran."
+# 4) Borrar la copia instalada (la carpeta desde donde corriste esto NO se toca)
+if (Test-Path $InstallDir) {
+    Remove-Item $InstallDir -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Host "[OK] Eliminado $InstallDir"
+}
+
+Write-Host "[OK] lang-beep desinstalado."

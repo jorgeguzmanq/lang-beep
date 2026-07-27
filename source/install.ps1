@@ -1,16 +1,26 @@
 # install.ps1 - Instala lang-beep para el usuario actual.
-# Portable: usa su propia ubicacion, no rutas fijas.
+# Copia los archivos necesarios a %LocalAppData%\lang-beep antes de instalar,
+# para que la Tarea Programada no dependa de la carpeta donde se descomprimio
+# el zip o se clono el repo (que el usuario puede mover o borrar despues).
 # Crea una Tarea Programada al iniciar sesion (con auto-reinicio si el proceso
 # muere) y arranca el script ya mismo, oculto.
 
 $ErrorActionPreference = 'Stop'
-$here     = Split-Path -Parent $MyInvocation.MyCommand.Path
-$vbs      = Join-Path $here 'lang-beep-hidden.vbs'
-$TaskName = 'lang-beep'
+$here       = Split-Path -Parent $MyInvocation.MyCommand.Path
+$InstallDir = Join-Path $env:LOCALAPPDATA 'lang-beep'
+$TaskName   = 'lang-beep'
 
-if (-not (Test-Path $vbs)) {
+if (-not (Test-Path (Join-Path $here 'lang-beep-hidden.vbs'))) {
     throw "No se encontro lang-beep-hidden.vbs junto a este instalador ($here)."
 }
+
+# --- Copiar a una ubicacion estable (no depende de donde se descomprimio) ---
+New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
+Copy-Item (Join-Path $here 'lang-beep.ps1')        $InstallDir -Force
+Copy-Item (Join-Path $here 'lang-beep-hidden.vbs') $InstallDir -Force
+Write-Host "[OK] Copiado a $InstallDir (ya puedes borrar la carpeta de donde corriste esto)."
+
+$vbs = Join-Path $InstallDir 'lang-beep-hidden.vbs'
 
 # --- 0) Limpiar instalacion anterior ---
 # Acceso directo heredado en la carpeta Inicio (version antigua).
@@ -30,7 +40,7 @@ if ($existing) {
 # El auto-reinicio se logra re-lanzando cada minuto: si el script murio, la
 # siguiente repeticion lo revive; si esta vivo, la copia nueva se cierra sola
 # (mutex de instancia unica dentro de lang-beep.ps1).
-$action = New-ScheduledTaskAction -Execute 'wscript.exe' -Argument ('"' + $vbs + '"') -WorkingDirectory $here
+$action = New-ScheduledTaskAction -Execute 'wscript.exe' -Argument ('"' + $vbs + '"') -WorkingDirectory $InstallDir
 
 # Disparador 1: al iniciar sesion (arranque inmediato tras login).
 $tLogon = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"

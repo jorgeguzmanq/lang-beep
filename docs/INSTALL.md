@@ -12,20 +12,24 @@ any Windows without touching the code.
 1. Download [`install/install.zip`](../install/install.zip) (or `git clone` this repo) and extract it.
 2. Double-click **`install.bat`** (or run `./install.ps1` in PowerShell).
 
-This registers a self-healing Scheduled Task (starts on login, restarts itself
-every minute if it ever dies) and starts the service immediately.
+`install.ps1` copies the script to `%LocalAppData%\lang-beep` first, then
+registers a self-healing Scheduled Task pointing there (starts on login,
+restarts itself every minute if it ever dies) and starts the service
+immediately. Because it runs from that stable copy, you can delete the
+downloaded zip/folder right after installing.
 
 **Verify:** focus any app, press **Win + Space** — you should hear N beeps and
 see the popup on every monitor.
 
 **Uninstall:** double-click **`uninstall.bat`** (or run `./uninstall.ps1`). Removes
-the Scheduled Task and stops the process; does not delete the folder.
+the Scheduled Task, stops the process, and deletes the `%LocalAppData%\lang-beep` copy.
 
-**Customize:** in `lang-beep.ps1`, `Beep(880, 120)` is `Beep(frequencyHz, durationMs)`;
-`Start-Sleep -Milliseconds 250` controls how often the active language is polled.
+**Customize:** edit `Beep(880, 120)` in `lang-beep.ps1` (→ `Beep(frequencyHz, durationMs)`)
+or `Start-Sleep -Milliseconds 250` (how often the active language is polled),
+then re-run `install.ps1` so the change gets copied to `%LocalAppData%\lang-beep`.
 
-**Troubleshooting:** check `lang-beep.log` next to the script. If the process
-died, the Scheduled Task revives it within a minute — confirm with
+**Troubleshooting:** check `lang-beep.log` in `%LocalAppData%\lang-beep`. If the
+process died, the Scheduled Task revives it within a minute — confirm with
 `Get-ScheduledTask -TaskName 'lang-beep'`.
 
 ---
@@ -42,21 +46,24 @@ funciona en cualquier Windows sin tocar el código.
 1. Descarga [`install/install.zip`](../install/install.zip) (o haz `git clone` de este repo) y descomprímelo.
 2. Doble clic en **`install.bat`** (o corre `./install.ps1` en PowerShell).
 
-Esto registra una Tarea Programada con auto-reinicio (arranca al iniciar
-sesión, se revive sola si muere) y arranca el servicio de inmediato.
+`install.ps1` primero copia el script a `%LocalAppData%\lang-beep`, y ahí sí
+registra una Tarea Programada con auto-reinicio (arranca al iniciar sesión, se
+revive sola si muere) y arranca el servicio de inmediato. Como corre desde esa
+copia estable, puedes borrar el zip/carpeta descargado apenas termine de instalar.
 
 **Verificar:** pon el foco en cualquier app y pulsa **Win + Space** — deberías
 oír N beeps y ver el popup en cada monitor.
 
 **Desinstalar:** doble clic en **`uninstall.bat`** (o corre `./uninstall.ps1`).
-Quita la Tarea Programada y detiene el proceso; no borra la carpeta.
+Quita la Tarea Programada, detiene el proceso y borra la copia en `%LocalAppData%\lang-beep`.
 
-**Personalizar:** en `lang-beep.ps1`, `Beep(880, 120)` es `Beep(frecuenciaHz, duraciónMs)`;
-`Start-Sleep -Milliseconds 250` controla cada cuánto se revisa el idioma activo.
+**Personalizar:** edita `Beep(880, 120)` en `lang-beep.ps1` (→ `Beep(frecuenciaHz, duraciónMs)`)
+o `Start-Sleep -Milliseconds 250` (cada cuánto se revisa el idioma activo), y
+vuelve a correr `install.ps1` para que el cambio se copie a `%LocalAppData%\lang-beep`.
 
-**Solución de problemas:** revisa `lang-beep.log` junto al script. Si el
-proceso murió, la Tarea Programada lo revive en menos de un minuto — confirma
-con `Get-ScheduledTask -TaskName 'lang-beep'`.
+**Solución de problemas:** revisa `lang-beep.log` en `%LocalAppData%\lang-beep`.
+Si el proceso murió, la Tarea Programada lo revive en menos de un minuto —
+confirma con `Get-ScheduledTask -TaskName 'lang-beep'`.
 
 ---
 
@@ -72,18 +79,21 @@ Windows sem editar o código.
 1. Baixe [`install/install.zip`](../install/install.zip) (ou `git clone` deste repo) e extraia.
 2. Clique duas vezes em **`install.bat`** (ou rode `./install.ps1` no PowerShell).
 
-Isso registra uma Tarefa Agendada com auto-reinício (inicia no login, se
-revive sozinha se morrer) e inicia o serviço imediatamente.
+`install.ps1` primeiro copia o script para `%LocalAppData%\lang-beep`, e só
+então registra uma Tarefa Agendada com auto-reinício (inicia no login, se
+revive sozinha se morrer) e inicia o serviço imediatamente. Como roda a partir
+dessa cópia estável, você pode apagar o zip/pasta baixado assim que terminar.
 
 **Verificar:** foque qualquer app e pressione **Win + Space** — você deve
 ouvir N beeps e ver o popup em cada monitor.
 
 **Desinstalar:** clique duas vezes em **`uninstall.bat`** (ou rode
-`./uninstall.ps1`). Remove a Tarefa Agendada e para o processo; não apaga a pasta.
+`./uninstall.ps1`). Remove a Tarefa Agendada, para o processo e apaga a cópia em `%LocalAppData%\lang-beep`.
 
-**Personalizar:** em `lang-beep.ps1`, `Beep(880, 120)` é `Beep(frequênciaHz, duraçãoMs)`;
-`Start-Sleep -Milliseconds 250` controla a frequência da checagem do idioma ativo.
+**Personalizar:** edite `Beep(880, 120)` em `lang-beep.ps1` (→ `Beep(frequênciaHz, duraçãoMs)`)
+ou `Start-Sleep -Milliseconds 250` (frequência da checagem do idioma ativo), e
+rode `install.ps1` de novo para copiar a mudança para `%LocalAppData%\lang-beep`.
 
-**Solução de problemas:** veja `lang-beep.log` ao lado do script. Se o
+**Solução de problemas:** veja `lang-beep.log` em `%LocalAppData%\lang-beep`. Se o
 processo morreu, a Tarefa Agendada o revive em menos de um minuto — confirme
 com `Get-ScheduledTask -TaskName 'lang-beep'`.
