@@ -1,18 +1,25 @@
 # lang-beep
 
-Detecta el cambio de idioma/distribución de teclado en Windows (**Win + Space**)
-y te avisa de dos formas a la vez:
+**Stop losing three words every time Windows silently switches your keyboard language.**
 
-- **Sonido**: un beep por cada posición del idioma en tu lista de Windows —
-  idioma 1 → 1 beep, idioma 2 → 2 beeps, etc.
-- **Visual**: un popup centrado en pantalla (todas las pantallas conectadas)
-  con el código del idioma (`ENG`, `SPA`, ...) que aparece y se desvanece en
-  menos de un segundo.
+If you type in more than one language, you know the drill: hit **Win + Space**, keep typing, and only notice you're still on the wrong layout after `ñ` shows up as `;` (or your accents just vanish). macOS nails this with a clean on-screen indicator. Windows... doesn't, really — its built-in language flag is easy to miss and most people turn it off.
 
-Es dinámico: lee el orden real de idiomas desde el registro, así que funciona
-en cualquier Windows sin tocar el código.
+`lang-beep` fixes that with two dead-simple signals, fired the instant you switch:
 
-## Instalación rápida (desde el código fuente)
+- 🔊 **A beep** — one tone per language, counted by its position in your Windows language list (1st language → 1 beep, 2nd → 2 beeps, ...). You learn to recognize it without looking up.
+- 🪟 **A popup** — the language code (`ENG`, `SPA`, `POR`, ...) in a small rounded card, centered on **every monitor**, gone in under a second. Just enough to confirm with a glance.
+
+No settings UI, no background bloat — it's a ~250-line PowerShell script that watches your active keyboard layout and reacts.
+
+## Download
+
+Grab the ready-to-run executable from the [**Releases**](../../releases/latest) page — no PowerShell execution policy hassles:
+
+**[⬇ Download lang-beep.exe](../../releases/latest)**
+
+Drop it in a folder, run it, done. Full setup instructions (including auto-start on login) in [`dist/README.md`](dist/README.md).
+
+## Install from source
 
 ```powershell
 git clone https://github.com/jorgeguzmanq/lang-beep.git
@@ -20,25 +27,28 @@ cd lang-beep
 ./install.ps1
 ```
 
-Crea una Tarea Programada (auto-reinicio, arranca al iniciar sesión) y lanza
-el servicio de inmediato. Para desinstalar: `./uninstall.ps1`.
+This registers a self-healing Scheduled Task (starts on login, restarts itself every minute if it ever dies) and launches the service immediately. Uninstall anytime with `./uninstall.ps1`.
 
-Guías detalladas: [INSTALL.es.md](INSTALL.es.md) · [INSTALL.en.md](INSTALL.en.md) · [INSTALL.pt.md](INSTALL.pt.md)
+Full guides: [INSTALL.en.md](INSTALL.en.md) · [INSTALL.es.md](INSTALL.es.md) · [INSTALL.pt.md](INSTALL.pt.md)
 
-## Instalación sin PowerShell (ejecutable)
+## Why it just works
 
-Si no quieres correr scripts, descarga `lang-beep.exe` +
-`lang-beep-popup.exe` desde la sección [Releases](../../releases) de este
-repo y sigue las instrucciones incluidas ahí (`dist/README.md` en el código
-fuente).
+- **Dynamic, zero config** — reads the real language order straight from the registry, so it works on any Windows setup without touching the code.
+- **Any language** — beep count comes from list *position*, not a hardcoded map; the popup label comes from `CultureInfo`, so it covers whatever languages Windows itself supports.
+- **Never in your way** — the popup can't steal focus, ignores whatever app is on top (even GPU-composited windows like Chrome/Electron), and disappears on its own.
+- **Fast** — the popup runs in-process on its own thread, not a spawned process, so it's essentially instant after the beep.
+- **Crash-proof** — a single mutex keeps one instance alive; the main loop never dies on a stray error, it just logs and keeps going.
 
-## Estructura
+## Structure
 
 ```
-lang-beep.ps1          # Script principal: detección + beeps por posición
-lang-beep-popup.ps1    # Popup visual del idioma (lo lanza lang-beep.ps1)
-lang-beep-hidden.vbs   # Lanzador silencioso (sin ventana de consola)
-install.ps1            # Instalador (Tarea Programada + arranque inmediato)
-uninstall.ps1          # Desinstalador
-dist/                  # Ejecutables compilados (PS2EXE) — no versionado, ver Releases
+lang-beep.ps1          # Main script: detection + beeps by position + popup
+lang-beep-hidden.vbs   # Silent launcher (no console window)
+install.ps1            # Installer (Scheduled Task + immediate start)
+uninstall.ps1          # Uninstaller
+dist/                  # Compiled executable (PS2EXE) — see Releases
 ```
+
+## Contributing
+
+This is deliberately small and hackable. Want to add a language mapping, swap the sound, add a settings UI? PRs welcome — it's built for exactly that.

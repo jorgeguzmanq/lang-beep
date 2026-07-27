@@ -1,14 +1,13 @@
 # lang-beep — version compilada (portable)
 
-Dos ejecutables, sin necesidad de tener PowerShell visible ni permisos de
+Un solo ejecutable, sin necesidad de tener PowerShell visible ni permisos de
 ejecucion de scripts:
 
-- `lang-beep.exe` — detecta el cambio de idioma de teclado (Win+Space) y hace sonar los beeps.
-- `lang-beep-popup.exe` — muestra el popup visual con el codigo de idioma (lo lanza `lang-beep.exe` automaticamente; no se ejecuta a mano).
+- `lang-beep.exe` — detecta el cambio de idioma de teclado (Win+Space), hace sonar los beeps y muestra el popup visual con el codigo de idioma (todo en el mismo proceso).
 
 ## Instalar en otro equipo
 
-1. Copia **ambos** `.exe` a una misma carpeta (por ejemplo `C:\Tools\lang-beep\`). Deben quedar juntos: `lang-beep.exe` busca a `lang-beep-popup.exe` en su misma carpeta.
+1. Copia `lang-beep.exe` a una carpeta (por ejemplo `C:\Tools\lang-beep\`).
 2. Crea una Tarea Programada que lo arranque al iniciar sesion:
 
    ```powershell

@@ -52,6 +52,12 @@ public static extern IntPtr GetKeyboardLayout(uint idThread);
 
 [DllImport("kernel32.dll")]
 public static extern bool Beep(uint dwFreq, uint dwDuration);
+
+[DllImport("user32.dll")]
+public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+[DllImport("user32.dll")]
+public static extern bool AllowSetForegroundWindow(int dwProcessId);
 '@
 
 $Win = Add-Type -MemberDefinition $signature -Name 'WinLayout' -Namespace 'Native' -PassThru
@@ -109,28 +115,128 @@ function Get-LangLabel([int]$langId) {
     }
 }
 
-$PopupExe    = Join-Path $ScriptDir 'lang-beep-popup.exe'
-$PopupScript = Join-Path $ScriptDir 'lang-beep-popup.ps1'
+# Cuerpo del popup: corre en su propio Runspace STA (mismo proceso) en vez de
+# un proceso nuevo, para no pagar arranque de CLR en cada cambio de idioma
+# (eso era la causa del retraso frente al beep, que es casi instantaneo).
+$PopupScriptBlock = {
+    param($Text)
 
-# Lanza el popup como proceso independiente (no bloquea el bucle de deteccion).
-# Usa el ejecutable compilado si esta presente (distribucion sin PowerShell
-# visible); si no, cae al .ps1 (uso en desarrollo).
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+
+    function Get-RoundedRegion([int]$width, [int]$height, [int]$radius) {
+        $path = New-Object System.Drawing.Drawing2D.GraphicsPath
+        $d = $radius * 2
+        $path.AddArc(0, 0, $d, $d, 180, 90)
+        $path.AddArc($width - $d, 0, $d, $d, 270, 90)
+        $path.AddArc($width - $d, $height - $d, $d, $d, 0, 90)
+        $path.AddArc(0, $height - $d, $d, $d, 90, 90)
+        $path.CloseFigure()
+        return New-Object System.Drawing.Region($path)
+    }
+
+    # Levanta el bloqueo de "foreground lock" de Windows para que este proceso
+    # (que corre en segundo plano, sin ser la app activa) pueda de verdad
+    # colocar sus ventanas por encima de la app en foco.
+    try { [void][Native.WinLayout]::AllowSetForegroundWindow(-1) } catch { }
+
+    $allScreens = [System.Windows.Forms.Screen]::AllScreens
+
+    $forms = @()
+    $w = 160; $h = 100
+    $SWP_NOMOVE = 0x0002; $SWP_NOSIZE = 0x0001; $SWP_NOACTIVATE = 0x0010; $SWP_SHOWWINDOW = 0x0040
+
+    foreach ($screen in $allScreens) {
+        $form = New-Object System.Windows.Forms.Form
+        $form.FormBorderStyle = 'None'
+        $form.StartPosition   = 'Manual'
+        $form.TopMost         = $true
+        $form.ShowInTaskbar   = $false
+        $form.BackColor       = [System.Drawing.Color]::White
+        $form.Size            = New-Object System.Drawing.Size($w, $h)
+        $form.Opacity         = 0.92
+        $form.Region          = Get-RoundedRegion $w $h 40
+
+        $bounds = $screen.Bounds
+        $x = $bounds.X + [int](($bounds.Width - $w) / 2)
+        $y = $bounds.Y + [int](($bounds.Height - $h) / 2)
+        $form.Location = New-Object System.Drawing.Point($x, $y)
+
+        $label = New-Object System.Windows.Forms.Label
+        $label.Text      = $Text
+        $label.Font      = New-Object System.Drawing.Font('Segoe UI', 28, [System.Drawing.FontStyle]::Bold)
+        $label.ForeColor = [System.Drawing.Color]::Black
+        $label.TextAlign = 'MiddleCenter'
+        $label.Dock      = 'Fill'
+        $form.Controls.Add($label)
+
+        $forms += $form
+        $form.Show()
+
+        # Refuerzo Win32: HWND_TOPMOST (-1) explicito, por encima de lo que hace
+        # la propiedad TopMost de WinForms, para ganarle a apps con superficies
+        # compuestas por GPU (Chrome/Electron) que a veces ignoran el orden Z.
+        [void][Native.WinLayout]::SetWindowPos($form.Handle, [IntPtr]-1, 0, 0, 0, 0, ($SWP_NOMOVE -bor $SWP_NOSIZE -bor $SWP_NOACTIVATE -bor $SWP_SHOWWINDOW))
+    }
+
+    # ApplicationContext.ExitThread() termina SOLO el bucle de mensajes de este
+    # hilo. Application.Exit() (lo que se usaba antes) termina el bucle de
+    # mensajes de TODOS los hilos del proceso -> si dos popups se disparaban
+    # cerca uno del otro, el primero en cerrar cortaba a medias al segundo
+    # (por eso a veces se veia en todas las pantallas y a veces en una sola).
+    $ctx = New-Object System.Windows.Forms.ApplicationContext
+    $timer = New-Object System.Windows.Forms.Timer
+    $timer.Interval = 800
+    $timer.Add_Tick({
+        $timer.Stop()
+        foreach ($f in $forms) { $f.Close() }
+        $ctx.ExitThread()
+    })
+    $timer.Start()
+    [System.Windows.Forms.Application]::Run($ctx)
+}
+
+$global:PendingPopups = New-Object System.Collections.Generic.List[object]
+
+# Lanza el popup en un Runspace STA nuevo (no bloquea el bucle de deteccion,
+# no crea un proceso nuevo).
 function Show-LangPopup([string]$text) {
     try {
-        if (Test-Path $PopupExe) {
-            Start-Process -FilePath $PopupExe -ArgumentList $text
-        } else {
-            Start-Process -FilePath 'powershell.exe' -WindowStyle Hidden -ArgumentList @(
-                '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$PopupScript`"", $text
-            )
-        }
+        $rs = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace()
+        $rs.ApartmentState = 'STA'
+        $rs.ThreadOptions  = 'UseNewThread'
+        $rs.Open()
+        $psi = [System.Management.Automation.PowerShell]::Create()
+        $psi.Runspace = $rs
+        [void]$psi.AddScript($PopupScriptBlock).AddArgument($text)
+        $async = $psi.BeginInvoke()
+        $global:PendingPopups.Add([PSCustomObject]@{ PS = $psi; RS = $rs; Async = $async })
     } catch {
         Write-Log "Error mostrando popup: $($_.Exception.Message)"
     }
 }
 
+# Libera los Runspaces de popups que ya terminaron (evita fugas de memoria).
+function Clear-CompletedPopups {
+    if ($global:PendingPopups.Count -eq 0) { return }
+    $still = New-Object System.Collections.Generic.List[object]
+    foreach ($p in $global:PendingPopups) {
+        if ($p.Async.IsCompleted) {
+            try { $p.PS.EndInvoke($p.Async) } catch { }
+            try { $p.PS.Dispose() } catch { }
+            try { $p.RS.Close(); $p.RS.Dispose() } catch { }
+        } else {
+            $still.Add($p)
+        }
+    }
+    $global:PendingPopups = $still
+}
+
 # --- Bucle principal (a prueba de fallos) ---
 Write-Log "lang-beep iniciado (PID $PID)"
+# Precarga los ensamblados de WinForms en el proceso para que ni el primer
+# popup pague el costo de carga (queda compartido para todos los Runspaces).
+try { Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing } catch { }
 $order = @()
 try { $order = Get-OrderedLangIds } catch { Write-Log "Error leyendo Preload al inicio: $($_.Exception.Message)" }
 $last  = 0
@@ -139,6 +245,7 @@ try { $last = Get-ActiveLangId } catch { }
 while ($true) {
     Start-Sleep -Milliseconds 250
     try {
+        Clear-CompletedPopups
         $current = Get-ActiveLangId
         # 0 = sin ventana valida (bloqueo/escritorio seguro): no tocar $last.
         if ($current -eq 0) { continue }
