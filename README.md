@@ -15,7 +15,7 @@ No settings UI, no background bloat — it's a ~250-line PowerShell script that 
 
 There's no compiled `.exe` — it's a plain PowerShell script, so there's nothing for Windows Defender or SmartScreen to be suspicious about.
 
-1. Download this repo: click **Code → Download ZIP** on GitHub (or `git clone https://github.com/jorgeguzmanq/lang-beep.git`), then extract it.
+1. **[⬇ Download install.zip](install/install.zip)** and extract it.
 2. Double-click **`install.bat`**.
 
 That's it. It registers a self-healing Scheduled Task (starts on login, restarts itself every minute if it ever dies) and launches the service immediately. Double-click **`uninstall.bat`** anytime to remove it.
@@ -24,11 +24,11 @@ Prefer the terminal?
 
 ```powershell
 git clone https://github.com/jorgeguzmanq/lang-beep.git
-cd lang-beep
+cd lang-beep/source
 ./install.ps1
 ```
 
-Full guides: [INSTALL.en.md](INSTALL.en.md) · [INSTALL.es.md](INSTALL.es.md) · [INSTALL.pt.md](INSTALL.pt.md)
+Full guide (EN / ES / PT): [docs/INSTALL.md](docs/INSTALL.md)
 
 ## Why it just works
 
@@ -41,10 +41,13 @@ Full guides: [INSTALL.en.md](INSTALL.en.md) · [INSTALL.es.md](INSTALL.es.md) ·
 ## Structure
 
 ```
-lang-beep.ps1          # Main script: detection + beeps by position + popup
-lang-beep-hidden.vbs   # Silent launcher (no console window)
-install.ps1 / .bat     # Installer (Scheduled Task + immediate start)
-uninstall.ps1 / .bat   # Uninstaller
+source/                     # The actual script
+  lang-beep.ps1              # Main script: detection + beeps by position + popup
+  lang-beep-hidden.vbs        # Silent launcher (no console window)
+  install.ps1 / install.bat   # Installer (Scheduled Task + immediate start)
+  uninstall.ps1 / uninstall.bat  # Uninstaller
+install/install.zip         # Same 6 files above, zipped for a no-git-required download
+docs/INSTALL.md             # Full install guide, EN / ES / PT
 ```
 
 ## Contributing
