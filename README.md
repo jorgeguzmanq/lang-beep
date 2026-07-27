@@ -11,23 +11,22 @@ If you type in more than one language, you know the drill: hit **Win + Space**, 
 
 No settings UI, no background bloat — it's a ~250-line PowerShell script that watches your active keyboard layout and reacts.
 
-## Download
+## Install
 
-Grab the ready-to-run executable from the [**Releases**](../../releases/latest) page — no PowerShell execution policy hassles:
+There's no compiled `.exe` — it's a plain PowerShell script, so there's nothing for Windows Defender or SmartScreen to be suspicious about.
 
-**[⬇ Download lang-beep.exe](../../releases/latest)**
+1. Download this repo: click **Code → Download ZIP** on GitHub (or `git clone https://github.com/jorgeguzmanq/lang-beep.git`), then extract it.
+2. Double-click **`install.bat`**.
 
-Drop it in a folder, run it, done. Full setup instructions (including auto-start on login) in [`dist/README.md`](dist/README.md).
+That's it. It registers a self-healing Scheduled Task (starts on login, restarts itself every minute if it ever dies) and launches the service immediately. Double-click **`uninstall.bat`** anytime to remove it.
 
-## Install from source
+Prefer the terminal?
 
 ```powershell
 git clone https://github.com/jorgeguzmanq/lang-beep.git
 cd lang-beep
 ./install.ps1
 ```
-
-This registers a self-healing Scheduled Task (starts on login, restarts itself every minute if it ever dies) and launches the service immediately. Uninstall anytime with `./uninstall.ps1`.
 
 Full guides: [INSTALL.en.md](INSTALL.en.md) · [INSTALL.es.md](INSTALL.es.md) · [INSTALL.pt.md](INSTALL.pt.md)
 
@@ -44,9 +43,8 @@ Full guides: [INSTALL.en.md](INSTALL.en.md) · [INSTALL.es.md](INSTALL.es.md) ·
 ```
 lang-beep.ps1          # Main script: detection + beeps by position + popup
 lang-beep-hidden.vbs   # Silent launcher (no console window)
-install.ps1            # Installer (Scheduled Task + immediate start)
-uninstall.ps1          # Uninstaller
-dist/                  # Compiled executable (PS2EXE) — see Releases
+install.ps1 / .bat     # Installer (Scheduled Task + immediate start)
+uninstall.ps1 / .bat   # Uninstaller
 ```
 
 ## Contributing
